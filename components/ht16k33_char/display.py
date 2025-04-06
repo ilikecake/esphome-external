@@ -7,7 +7,6 @@ from esphome.const import (
     CONF_BUFFER_SIZE,
     CONF_BRIGHTNESS,
     CONF_DEVICE,
-    CONF_CONTINUOUS,
 )
 
 DEPENDENCIES = ["i2c"]
