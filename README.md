@@ -21,4 +21,11 @@ A component for the battery monitor chip used on some of the Adafruit feather bo
 
 ### HT16K33 Character Display Driver
 
+
+
+**Changes from the submitted copy**
+
+* define `CONF_CONTINUOUS` locally in display.py.
+* Remove reference to `get_i2c_address()` from the `dump_config()` function.
+
 ## Usage
