@@ -178,12 +178,13 @@ void HT16k33CharComponent::dump_config() {
   // Display device addresses.
   ESP_LOGCONFIG(TAG, "  Number of displays: %d", this->displays_.size());
 
-  ESP_LOGCONFIG(TAG, "  I2C Addresses:");
-  i = 0;
-  for (auto *display : this->displays_) {
-    ESP_LOGCONFIG(TAG, "    Device[%d]: 0x%02X", i, display->get_i2c_address());
-    i++;
-  }
+  //CHANGE FROM SUBMITTED CODE: Listing the devices addresses is not currently supported.
+  //ESP_LOGCONFIG(TAG, "  I2C Addresses:");
+  //i = 0;
+  //for (auto *display : this->displays_) {
+  //  ESP_LOGCONFIG(TAG, "    Device[%d]: 0x%02X", i, display->get_i2c_address());
+  //  i++;
+  //}
 
   if (this->is_failed()) {
     // Nothing in this code actually sets the device to failed, so this should never trigger.
