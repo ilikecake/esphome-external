@@ -1,19 +1,19 @@
 import esphome.codegen as cg
-from esphome.components import i2c, display
+from esphome.components import display, i2c
 import esphome.config_validation as cv
 from esphome.const import (
+    CONF_BRIGHTNESS,
+    CONF_BUFFER_SIZE,
+    CONF_CONTINUOUS,
+    CONF_DEVICE,
     CONF_ID,
     CONF_LAMBDA,
-    CONF_BUFFER_SIZE,
-    CONF_BRIGHTNESS,
-    CONF_DEVICE,
 )
 
 DEPENDENCIES = ["i2c"]
 
 ht16k33_char_ns = cg.esphome_ns.namespace("ht16k33_char")
 
-CONF_CONTINUOUS = "continuous"  #CHANGE FROM SUBMITTED
 CONF_SCROLL = "scroll"
 CONF_SCROLL_SPEED = "scroll_speed"
 CONF_SCROLL_DWELL = "scroll_dwell"
@@ -50,6 +50,12 @@ HT16K33_DEVICE_TYPES = {
     },
     "ADAFRUIT_14_SEG_FLIPPED": {
         "CLASS_NAME": "Adafruit14SegFlip",
+    },
+    "SPARKFUN_14_SEG": {
+        "CLASS_NAME": "Sparkfun14Seg",
+    },
+    "SPARKFUN_14_SEG_FLIPPED": {
+        "CLASS_NAME": "Sparkfun14SegFlip",
     },
 }
 
