@@ -20,13 +20,19 @@ static const uint8_t HT16K33_DISPLAY_ON = 0x01;
 static const uint8_t HT16K33_MODE_STANDBY = 0x00;
 static const uint8_t HT16K33_MODE_NORMAL = 0x01;
 
+// Return codes from handle_special_char_()
+static const uint8_t SPECIAL_CHAR_NOT_FOUND = 0x00;      // Not a special char.
+static const uint8_t SPECIAL_CHAR_FOUND = 0x01;          // Special char found and handled
+static const uint8_t SPECIAL_CHAR_FOUND_ADVANCE = 0x02;  // Special char found and handled, advance display if the
+                                                         // special char was in the first position of the first display.
+
 class HT16k33CharComponent;
 
 // We can have up to 7 chips. Chip addresses are 0b1110xxx. Default is 0b1110000 (0x70).
 // For 7 segment displays the 28 pin package could address up to 8 digits.
 // So an absolute maximum number of chars is 8*7=56.
 
-// TODO: Explain what this does...
+// defines a type `ht16k33_char_writer_t` that is a pointer to a function of the type defined.
 using ht16k33_char_writer_t = std::function<void(HT16k33CharComponent &)>;
 
 class HT16k33CharComponent : public PollingComponent, public i2c::I2CDevice {
@@ -40,12 +46,11 @@ class HT16k33CharComponent : public PollingComponent, public i2c::I2CDevice {
   float get_setup_priority() const override;
   uint8_t update_display();
 
-  // This needs to have the stub or it won't work. This function is replaced by the device specific functions in
-  // the subclasses.
-  virtual uint8_t send_to_display(i2c::I2CDevice *display, uint8_t position) { return 0; };
+  void add_char(const char *char_to_add, uint16_t char_code);
+  void remove_char(const char *char_to_remove) { this->char_map_.erase(char_to_remove); };
 
   void set_brightness(uint8_t brightness) { this->brightness_ = brightness - 1; };
-  void set_buffer_size(uint8_t size_to_set) { this->char_buffer_size_ = size_to_set; };
+  void set_buffer_max_size(uint16_t size_to_set) { this->char_buffer_max_size_ = size_to_set; };
 
   // Called automatically during setup to generate a list of I2CDevices that represent the displays.
   // We iterate through the displays_ to address individual displays during runtime.
@@ -63,19 +68,19 @@ class HT16k33CharComponent : public PollingComponent, public i2c::I2CDevice {
   void display_standby(bool standby);
 
   // Evaluate the printf-format and print the result at the given position.
-  uint8_t printf(uint8_t start_pos, bool clear_buffer, const char *format, ...) __attribute__((format(printf, 4, 5)));
+  uint8_t printf(uint16_t start_pos, bool clear_buffer, const char *format, ...) __attribute__((format(printf, 4, 5)));
 
   // Print `str` at the given position.
-  uint8_t print(uint8_t start_pos, bool clear_buffer, const char *str);
+  uint8_t print(uint16_t start_pos, bool clear_buffer, const char *str);
 
   // Print `str` at position 0.
   uint8_t print(bool clear_buffer, const char *str);
 
   // Evaluate the strftime-format and print the result at the given position.
-  uint8_t strftime(uint8_t start_pos, bool clear_buffer, const char *format, ESPTime time)
+  uint8_t strftime(uint16_t start_pos, bool clear_buffer, const char *format, ESPTime time)
       __attribute__((format(strftime, 4, 0)));
 
-  uint8_t clock_display(uint8_t start_pos, bool clear_buffer, bool show_leading_zero, bool use_ampm, ESPTime time);
+  uint8_t clock_display(uint16_t start_pos, bool clear_buffer, bool show_leading_zero, bool use_ampm, ESPTime time);
 
   void blank();
 
@@ -83,7 +88,19 @@ class HT16k33CharComponent : public PollingComponent, public i2c::I2CDevice {
   uint8_t strftime(const char *format, ESPTime time) __attribute__((format(strftime, 2, 0)));
 
  protected:
+  std::unordered_map<std::string, uint16_t> char_map_ = {{" ", 0b0000000000000000}};
+
+  // These two functions are overridden by device specific versions in the subclasses.
+  virtual uint8_t handle_special_char(char char_to_find, uint8_t position) { return 0; };
+  virtual void write_to_buffer(uint16_t char_to_write, uint8_t char_position){};
+
+  uint8_t get_next_char_(uint16_t start_position, std::string *next_char);
+  void clear_buffer_();
+  uint8_t char_len_(char char_to_test);
+  uint16_t send_to_display_common_(i2c::I2CDevice *display, uint16_t position);
+
   uint8_t scroll_state_;
+  uint8_t num_chars_per_display_{0};  // The number of characters per display. This should be set by the derived class.
 
   std::vector<i2c::I2CDevice *> displays_{this};
 
@@ -96,13 +113,17 @@ class HT16k33CharComponent : public PollingComponent, public i2c::I2CDevice {
   uint32_t scroll_delay_{750};
   uint32_t last_scroll_{0};
 
-  uint8_t brightness_{15};  // Intensity of the display from 0 to 15 (most) TODO: Change to brightness?
+  uint8_t brightness_{15};  // Brightness of the display from 0 (off) to 15 (brightest)
 
-  std::string char_buffer_;   // This buffer holds the entire character message to display.
-  uint8_t buffer_[20];        // This buffer is used to send the raw bytes to the HT16k33 device. TODO: Make this 17?
-  uint8_t char_buffer_size_;  // This is the length of the character buffer. I need to track this separately instead of
-                              // just calling buffer.length(), since when I clear the buffer, it resets the size to 0.
-                              // TODO: Maybe a different data type would be better here?
+  std::string message_buffer_;  // This buffer holds the entire character message to display.
+  uint8_t buffer_[20];          // This buffer is used to send the raw bytes to the HT16k33 device.
+  uint16_t
+      char_buffer_max_size_;  // This is the maximum allowable length of the char buffer. This should be set to some
+                              //  reasonable number greater than the expected length of the strings that will be
+                              //  displayed. Note that this is not a hard limit, as there is a null terminating
+                              //  character that may be added into this length. This is also a limit in bytes, not
+                              //  characters. This means that if multi-byte characters are used, the number of displayed
+                              //  characters will be less than the number defined here.
 
   optional<ht16k33_char_writer_t> writer_{};
 };
