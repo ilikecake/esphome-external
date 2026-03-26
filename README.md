@@ -6,7 +6,7 @@ In general, these components will be submitted to be included in the official ES
 
 ### HT16K33 Character Display Driver
 
-**Status:** [Submitted on 4/5/2025.](https://github.com/esphome/esphome/pull/8520) Might make minor internal changes.
+**Status:** [Submitted on 4/5/2025.](https://github.com/esphome/esphome/pull/8520) As of 3/25/2026, this version is up-to-date with the PR.
 
 A driver for HT16K33 based character displays. See [here](https://github.com/ilikecake/esphome-docs/blob/f764c658b156498e4d027ab4ed47ba3fc3f97e88/components/display/ht16k33-char.rst) for more documentation on usage.
 
@@ -17,7 +17,7 @@ display:
   - platform: ht16k33_char
     device: ADAFRUIT_7SEGMENT_1.2IN
     address: 0x70
-    buffer_size: 8
+    max_buffer_length: 8
     lambda: |-
       auto time = id(sntp_time).now();
       it.clock_display(0, true, false, true, time);
@@ -25,8 +25,7 @@ display:
 
 **Changes from the submitted copy**
 
-* define `CONF_CONTINUOUS` locally in display.py.
-* Remove reference to `get_i2c_address()` from the `dump_config()` function.
+* None
 
 ## Usage
 
